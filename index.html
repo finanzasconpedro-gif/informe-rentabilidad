@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Informe de rentabilidad · PROSPEI</title>
+  <meta name="description" content="Subí tus movimientos y tu resumen de cuenta de Balanz y obtené tu informe de rentabilidad en dólares, con TIR y resultado por activo.">
+  <style>
+:root {
+  --ink: #16202c;
+  --ink-2: #4a5563;
+  --ink-3: #7b8592;
+  --line: #e3e5e8;
+  --bg: #f5f4f0;
+  --paper: #ffffff;
+  --brand: #143a5a;
+  --brand-2: #1d5a87;
+  --up: #3a9d5d;
+  --down: #cf5f5c;
+  --tot: #b9b8ad;
+  --zebra: #f6f6f3;
+  --radius: 14px;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); }
+body { -webkit-font-smoothing: antialiased; line-height: 1.5; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+[hidden] { display: none !important; }
+
+.top { background: var(--brand); color: #fff; }
+.top-in { display: flex; align-items: center; height: 60px; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .01em; }
+.mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #fff; color: var(--brand); font-weight: 800; }
+
+.hero { padding: 48px 0 24px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; font-weight: 700; color: var(--brand-2); margin: 0 0 8px; }
+.hero h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.12; margin: 0 0 12px; letter-spacing: -.02em; }
+.lede { font-size: 18px; color: var(--ink-2); max-width: 640px; margin: 0; }
+
+.card { background: var(--paper); border-radius: var(--radius); padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(20,58,90,.06); }
+.drops { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 640px) { .drops { grid-template-columns: 1fr; } }
+.drop { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 20px 20px 18px; border: 1.5px dashed #c9ced6; border-radius: 12px; cursor: pointer; transition: border-color .15s, background .15s; min-height: 150px; }
+.drop:hover, .drop.over { border-color: var(--brand-2); background: #f3f7fb; }
+.drop.ok { border-style: solid; border-color: var(--up); background: #f2f9f4; }
+.step { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.drop.ok .step { background: var(--up); }
+.drop-title { font-weight: 700; font-size: 17px; }
+.drop-hint { color: var(--ink-2); font-size: 14px; }
+.drop-file { margin-top: auto; padding-top: 10px; font-size: 13px; color: var(--brand-2); font-weight: 600; word-break: break-all; }
+.drop.ok .drop-file { color: #23733f; }
+
+.btn { font: inherit; font-weight: 650; border-radius: 10px; padding: 12px 20px; border: 0; cursor: pointer; transition: background .15s, opacity .15s; }
+.btn.primary { background: var(--brand); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: var(--brand-2); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--brand); padding-left: 0; }
+#go { width: 100%; font-size: 17px; padding: 14px; }
+.status { min-height: 1.5em; margin: 12px 0 0; color: var(--ink-2); font-size: 14px; }
+.status.err { color: #a33a37; font-weight: 600; }
+.privacy { margin: 4px 0 0; font-size: 13px; color: var(--ink-3); }
+
+.how { padding: 32px 0 48px; }
+.how h2 { font-size: 20px; margin: 0 0 12px; }
+.how ol { margin: 0; padding-left: 20px; color: var(--ink-2); }
+.how li { margin-bottom: 8px; }
+.small { font-size: 12.5px; color: var(--ink-3); }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0 12px; gap: 12px; flex-wrap: wrap; }
+.warn { background: #fff7e6; border: 1px solid #f0d9a8; color: #6b4e12; border-radius: 10px; padding: 10px 14px; font-size: 14px; margin-bottom: 12px; }
+.contact-cta { text-align: center; padding: 24px 0 8px; }
+
+/* --- Informe ------------------------------------------------------------- */
+.paper { background: var(--paper); border-radius: 4px; padding: 44px 48px; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 32px rgba(0,0,0,.07); margin-bottom: 32px; }
+@media (max-width: 640px) { .paper { padding: 24px 16px; } }
+.paper h1 { font-size: 24px; line-height: 1.2; margin: 4px 0 6px; letter-spacing: -.01em; }
+.paper h2 { font-size: 17px; margin: 28px 0 8px; color: var(--ink); }
+.paper p { font-size: 14px; margin: 6px 0; }
+.paper .small { font-size: 11.5px; line-height: 1.45; }
+.brand-line { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--brand-2); }
+.meta { color: var(--ink-3); font-size: 12.5px !important; }
+.paper table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 10px 0 6px; font-variant-numeric: tabular-nums; }
+.paper th { text-align: left; font-weight: 700; border-bottom: 1.5px solid var(--ink); padding: 5px 6px; }
+.paper td { padding: 4.5px 6px; border-bottom: 1px solid #eeeeea; }
+.paper tbody tr:nth-child(even) td { background: var(--zebra); }
+.paper tr.b td { font-weight: 700; }
+.paper .r { text-align: right; white-space: nowrap; }
+.paper .sub { color: var(--ink-3); font-size: 11px; }
+.chart { width: 100%; height: auto; display: block; margin: 8px 0; font-family: inherit; }
+.chart .axis { stroke: #9aa1aa; stroke-width: 1; }
+.chart .conn { stroke: #aab; stroke-dasharray: 3 3; }
+.chart .up { fill: var(--up); }
+.chart .down { fill: var(--down); }
+.chart .tot { fill: var(--tot); }
+.chart .val { font-size: 13px; font-weight: 700; fill: var(--ink); text-anchor: middle; }
+.chart .lab { font-size: 12px; fill: var(--ink-2); text-anchor: middle; }
+.chart .note { font-size: 10px; fill: var(--ink-3); }
+.chart .tk { font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+.chart .num { font-size: 12px; fill: var(--ink-2); }
+.chart .colhead { font-size: 11px; fill: var(--ink-3); }
+
+.foot { padding: 8px 16px 40px; color: var(--ink-3); font-size: 12px; }
+
+/* Exportación a PDF: sin sombras ni bordes redondeados */
+.exporting .paper { box-shadow: none; border-radius: 0; padding: 0; margin: 0; }
+.avoid, tr, svg { break-inside: avoid; page-break-inside: avoid; }
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js" defer></script>
+  <script type="module">
+import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
+const MEP_INCLUIDO = {"2024-01-01":995,"2024-01-02":991.3,"2024-01-03":1033.56,"2024-01-04":1050.43,"2024-01-05":1104.93,"2024-01-08":1141.62,"2024-01-09":1160.38,"2024-01-10":1142.45,"2024-01-11":1119.17,"2024-01-12":1096.39,"2024-01-15":1125.3,"2024-01-16":1163.48,"2024-01-17":1221.49,"2024-01-18":1227.54,"2024-01-19":1251.67,"2024-01-22":1241.41,"2024-01-23":1233.22,"2024-01-24":1232.72,"2024-01-25":1229.32,"2024-01-26":1188.48,"2024-01-29":1219.88,"2024-01-30":1208.21,"2024-01-31":1175.67,"2024-02-01":1235.43,"2024-02-02":1237.43,"2024-02-05":1209.52,"2024-02-06":1194.74,"2024-02-07":1199.41,"2024-02-08":1183.55,"2024-02-09":1173.36,"2024-02-12":1173.36,"2024-02-13":1173.36,"2024-02-14":1124.14,"2024-02-15":1086.86,"2024-02-16":1064.71,"2024-02-19":1108.61,"2024-02-20":1080.31,"2024-02-21":1072.51,"2024-02-22":1054.78,"2024-02-23":1076.6,"2024-02-26":1051.04,"2024-02-27":1044.95,"2024-02-28":1031.25,"2024-02-29":1032.24,"2024-03-01":1053.46,"2024-03-04":1029.54,"2024-03-05":1016.08,"2024-03-06":981.21,"2024-03-07":996.63,"2024-03-08":1000.47,"2024-03-11":980.98,"2024-03-12":1036.19,"2024-03-13":1012.01,"2024-03-14":1015.67,"2024-03-15":1027.63,"2024-03-18":1023.89,"2024-03-19":1032.36,"2024-03-20":1042.43,"2024-03-21":1036.25,"2024-03-22":1036.16,"2024-03-25":1012.94,"2024-03-26":1027.09,"2024-03-27":1016.09,"2024-03-28":1016.09,"2024-03-29":1016.09,"2024-04-01":1016.09,"2024-04-02":1016.09,"2024-04-03":991.25,"2024-04-04":996.25,"2024-04-05":1000.88,"2024-04-08":985.86,"2024-04-09":1000.69,"2024-04-10":999.64,"2024-04-11":994.86,"2024-04-12":1005.46,"2024-04-15":1021.55,"2024-04-16":1031.63,"2024-04-17":1021.16,"2024-04-18":1021.92,"2024-04-19":1026.65,"2024-04-22":1014.98,"2024-04-23":1006.71,"2024-04-24":1015.54,"2024-04-25":1034.06,"2024-04-26":1034.04,"2024-04-29":1037.77,"2024-04-30":1040.89,"2024-05-01":1040.89,"2024-05-02":1064.56,"2024-05-03":1072.64,"2024-05-06":1064.47,"2024-05-07":1048.49,"2024-05-08":1038.77,"2024-05-09":1046.02,"2024-05-10":1035.73,"2024-05-13":1034.89,"2024-05-14":1041.65,"2024-05-15":1050.33,"2024-05-16":1062.25,"2024-05-17":1071.12,"2024-05-20":1106.22,"2024-05-21":1170.28,"2024-05-22":1230.6,"2024-05-23":1234.4,"2024-05-24":1205.73,"2024-05-27":1228.18,"2024-05-28":1200.9,"2024-05-29":1177.14,"2024-05-30":1182.71,"2024-05-31":1215.93,"2024-06-03":1269.91,"2024-06-04":1280.8,"2024-06-05":1283.09,"2024-06-06":1272.01,"2024-06-07":1282.33,"2024-06-10":1272.63,"2024-06-11":1273.9,"2024-06-12":1278.94,"2024-06-13":1241.1,"2024-06-14":1244.64,"2024-06-17":1244.64,"2024-06-18":1245.49,"2024-06-19":1273.81,"2024-06-20":1273.81,"2024-06-21":1273.81,"2024-06-24":1295.22,"2024-06-25":1308.99,"2024-06-26":1332.13,"2024-06-27":1331.96,"2024-06-28":1347.96,"2024-07-01":1413.01,"2024-07-02":1428.46,"2024-07-03":1382.5,"2024-07-04":1395.68,"2024-07-05":1396.24,"2024-07-08":1386.86,"2024-07-09":1386.86,"2024-07-10":1377.39,"2024-07-11":1403.33,"2024-07-12":1416.22,"2024-07-15":1307.54,"2024-07-16":1278.94,"2024-07-17":1300,"2024-07-18":1315.29,"2024-07-19":1331.7,"2024-07-22":1333.37,"2024-07-23":1324.96,"2024-07-24":1337.51,"2024-07-25":1332.77,"2024-07-26":1323.15,"2024-07-29":1296.57,"2024-07-30":1267.95,"2024-07-31":1293.33,"2024-08-01":1300.14,"2024-08-02":1334.04,"2024-08-05":1346.09,"2024-08-06":1336.4,"2024-08-07":1331.95,"2024-08-08":1310.45,"2024-08-09":1298.27,"2024-08-12":1284.35,"2024-08-13":1272.49,"2024-08-14":1268.81,"2024-08-15":1276.21,"2024-08-16":1295.3,"2024-08-19":1290.1,"2024-08-20":1287.82,"2024-08-21":1291.75,"2024-08-22":1283.23,"2024-08-23":1282.7,"2024-08-26":1288.25,"2024-08-27":1286.19,"2024-08-28":1282.19,"2024-08-29":1271.33,"2024-08-30":1279.96,"2024-09-02":1285.01,"2024-09-03":1294.46,"2024-09-04":1279.84,"2024-09-05":1258.82,"2024-09-06":1243.87,"2024-09-09":1226.42,"2024-09-10":1230.44,"2024-09-11":1230.16,"2024-09-12":1239.48,"2024-09-13":1226.53,"2024-09-16":1215.72,"2024-09-17":1214.04,"2024-09-18":1206.72,"2024-09-19":1197.74,"2024-09-20":1200.1,"2024-09-23":1204.57,"2024-09-24":1202.13,"2024-09-25":1209.79,"2024-09-26":1210.95,"2024-09-27":1207.75,"2024-09-30":1215.03,"2024-10-01":1220.07,"2024-10-02":1207.51,"2024-10-03":1191.74,"2024-10-04":1187.52,"2024-10-07":1184.07,"2024-10-08":1169.54,"2024-10-09":1147.4,"2024-10-10":1134.84,"2024-10-11":1134.84,"2024-10-14":1143.88,"2024-10-15":1139.91,"2024-10-16":1159.89,"2024-10-17":1159.6,"2024-10-18":1159.05,"2024-10-21":1167.91,"2024-10-22":1161.97,"2024-10-23":1161.99,"2024-10-24":1160,"2024-10-25":1141.81,"2024-10-28":1134.18,"2024-10-29":1138.18,"2024-10-30":1138.32,"2024-10-31":1131.46,"2024-11-01":1146.17,"2024-11-04":1151.54,"2024-11-05":1153.5,"2024-11-06":1145.69,"2024-11-07":1135.99,"2024-11-08":1130.2,"2024-11-11":1131.23,"2024-11-12":1124.4,"2024-11-13":1121.11,"2024-11-14":1105.75,"2024-11-15":1096.02,"2024-11-18":1096.02,"2024-11-19":1075.12,"2024-11-20":1074.86,"2024-11-21":1078.95,"2024-11-22":1080.4,"2024-11-25":1077.58,"2024-11-26":1076.12,"2024-11-27":1074.61,"2024-11-28":1075.15,"2024-11-29":1075.76,"2024-12-02":1068.89,"2024-12-03":1075.65,"2024-12-04":1076.34,"2024-12-05":1062.16,"2024-12-06":1049.33,"2024-12-09":1049.31,"2024-12-10":1060.52,"2024-12-11":1057.72,"2024-12-12":1058.21,"2024-12-13":1073.08,"2024-12-16":1100.27,"2024-12-17":1145.26,"2024-12-18":1131.22,"2024-12-19":1131.19,"2024-12-20":1142.2,"2024-12-23":1162.3,"2024-12-24":1160.97,"2024-12-25":1160.97,"2024-12-26":1170.89,"2024-12-27":1170.56,"2024-12-30":1170.41,"2025-01-01":1170.41,"2025-01-02":1162.12,"2025-01-03":1165.88,"2025-01-06":1165.09,"2025-01-07":1164.37,"2025-01-08":1164.72,"2025-01-09":1164.19,"2025-01-10":1164.01,"2025-01-13":1163.21,"2025-01-14":1162.93,"2025-01-15":1164.05,"2025-01-16":1166.03,"2025-01-17":1165.84,"2025-01-20":1165.9,"2025-01-21":1167.61,"2025-01-22":1172.67,"2025-01-23":1167.35,"2025-01-24":1155.75,"2025-01-27":1162.22,"2025-01-28":1161.38,"2025-01-29":1163.36,"2025-01-30":1164.89,"2025-01-31":1164.79,"2025-02-03":1178.82,"2025-02-04":1188,"2025-02-05":1191.94,"2025-02-06":1189.03,"2025-02-07":1194.47,"2025-02-10":1184.07,"2025-02-11":1180.85,"2025-02-12":1186.35,"2025-02-13":1187.89,"2025-02-14":1183.88,"2025-02-17":1210.09,"2025-02-18":1203.16,"2025-02-19":1201.86,"2025-02-20":1206.06,"2025-02-21":1205.88,"2025-02-24":1207.48,"2025-02-25":1211.96,"2025-02-26":1211.56,"2025-02-27":1215.29,"2025-02-28":1228.48,"2025-03-03":1228.48,"2025-03-04":1228.48,"2025-03-05":1235.31,"2025-03-06":1237.86,"2025-03-07":1221.93,"2025-03-10":1228.92,"2025-03-11":1230.38,"2025-03-12":1229.34,"2025-03-13":1233.55,"2025-03-14":1237.78,"2025-03-17":1250.59,"2025-03-18":1299.32,"2025-03-19":1286.38,"2025-03-20":1287.59,"2025-03-21":1287.22,"2025-03-24":1287.22,"2025-03-25":1294.3,"2025-03-26":1295.63,"2025-03-27":1292.29,"2025-03-28":1302.44,"2025-03-31":1313.97,"2025-04-01":1314.47,"2025-04-02":1314.47,"2025-04-03":1319.42,"2025-04-04":1340.44,"2025-04-07":1370.35,"2025-04-08":1376.58,"2025-04-09":1341.72,"2025-04-10":1364.01,"2025-04-11":1333.33,"2025-04-14":1253.4,"2025-04-15":1237.9,"2025-04-16":1165.93,"2025-04-17":1165.93,"2025-04-18":1165.93,"2025-04-21":1122.08,"2025-04-22":1140.38,"2025-04-23":1168,"2025-04-24":1186.53,"2025-04-25":1184.24,"2025-04-28":1176.55,"2025-04-29":1173.15,"2025-04-30":1183.37,"2025-05-01":1183.37,"2025-05-02":1183.37,"2025-05-05":1202.92,"2025-05-06":1199.61,"2025-05-07":1156.07,"2025-05-08":1143.32,"2025-05-09":1144.11,"2025-05-12":1141.2,"2025-05-13":1140.92,"2025-05-14":1140.92,"2025-05-15":1140.92,"2025-05-16":1155.12,"2025-05-19":1148.77,"2025-05-20":1153.33,"2025-05-21":1148.8,"2025-05-22":1143.49,"2025-05-23":1143.32,"2025-05-26":1145.42,"2025-05-27":1161.3,"2025-05-28":1164.8,"2025-05-29":1181.9,"2025-05-30":1191.72,"2025-09-15":1488.06,"2025-09-16":1469.91,"2025-09-17":1486.47,"2025-09-18":1535.4,"2025-09-19":1551.03,"2025-09-22":1427.51,"2025-09-23":1405.02,"2025-09-24":1369.47,"2025-09-25":1380.13,"2025-09-26":1431.44,"2025-09-29":1454.91,"2025-09-30":1494.02,"2025-10-01":1523,"2025-10-02":1500,"2025-10-03":1498.81,"2025-10-06":1499.11,"2025-10-07":1533.95,"2025-10-08":1527.95,"2025-10-09":1440.81,"2025-10-10":1440.81,"2025-10-13":1409.92,"2025-10-14":1454.99,"2025-10-15":1441.77,"2025-10-16":1473.52,"2025-10-17":1541.49,"2025-10-20":1552.82,"2025-10-21":1591.57,"2025-10-22":1592.99,"2025-10-23":1533.7,"2025-10-24":1549.44,"2025-10-27":1440.79,"2025-10-28":1477.87,"2025-10-29":1475.21,"2025-10-30":1470.6,"2025-10-31":1477.46,"2025-11-03":1500.47,"2025-11-04":1495.58,"2025-11-05":1478.74,"2025-11-06":1480.23,"2025-11-07":1454.69,"2025-11-10":1458.18,"2025-11-11":1455.43,"2025-11-12":1451.89,"2025-11-13":1462.04,"2025-11-14":1451.17,"2025-11-17":1448.93,"2025-11-18":1440.51,"2025-11-19":1441.13,"2025-11-20":1452.76,"2025-11-21":1460.35,"2025-11-24":1460.35,"2025-11-25":1480.68,"2025-11-26":1487.55,"2025-11-27":1481.82,"2025-11-28":1476.42,"2025-12-01":1475.23,"2025-12-02":1477.35,"2025-12-03":1470.3,"2025-12-04":1470,"2025-12-05":1474.54,"2025-12-08":1474.54,"2025-12-09":1468.72,"2025-12-10":1471.35,"2025-12-11":1476.11,"2025-12-12":1478.73,"2025-12-15":1492.01,"2025-12-16":1504.3,"2025-12-17":1514.14,"2025-12-18":1498.58,"2025-12-19":1494.62,"2025-12-22":1493.06,"2025-12-23":1479.44,"2025-12-24":1481.63,"2025-12-25":1481.63,"2025-12-26":1486.11,"2025-12-29":1484.35,"2025-12-30":1480.74,"2025-12-31":1480.74,"2026-01-01":1480.74,"2026-01-02":1506.21,"2026-01-05":1501.49,"2026-01-06":1498.06,"2026-01-07":1494.56,"2026-01-08":1494.11,"2026-01-09":1489.42,"2026-01-12":1487.89,"2026-01-13":1487.11,"2026-01-14":1481.74,"2026-01-15":1473.83,"2026-01-16":1472.15,"2026-01-19":1466.7,"2026-01-20":1471.72,"2026-01-21":1463.7,"2026-01-22":1458.81,"2026-01-23":1469.38,"2026-01-26":1468.93,"2026-01-27":1464.66,"2026-01-28":1462.35,"2026-01-29":1458.88,"2026-01-30":1460.32,"2026-02-02":1450.23,"2026-02-03":1460.38,"2026-02-04":1457.29,"2026-02-05":1460.8,"2026-02-06":1447.99,"2026-02-09":1438.54,"2026-02-10":1432.85,"2026-02-11":1431.68,"2026-02-12":1417.81,"2026-02-13":1423.6,"2026-02-16":1423.6,"2026-02-17":1423.6,"2026-02-18":1415.69,"2026-02-19":1409.07,"2026-02-20":1402.08,"2026-02-23":1394.84,"2026-02-24":1405.08,"2026-02-25":1425.86,"2026-02-26":1437.58,"2026-02-27":1419.54,"2026-03-02":1413.54,"2026-03-03":1434.11,"2026-03-04":1427.7,"2026-03-05":1433.21,"2026-03-06":1437.53,"2026-03-09":1430.17,"2026-03-10":1422.12,"2026-03-11":1413.8,"2026-03-12":1415.52,"2026-03-13":1424.34,"2026-03-16":1424.92,"2026-03-17":1417.3,"2026-03-18":1420.38,"2026-03-19":1421.08,"2026-03-20":1422.13,"2026-03-23":1415.68,"2026-03-24":1415.68,"2026-03-25":1404.55,"2026-03-26":1401.28,"2026-03-27":1429.73,"2026-03-30":1432.51,"2026-03-31":1422.84,"2026-04-01":1434.04,"2026-04-02":1434.04,"2026-04-03":1434.04,"2026-04-06":1429.57,"2026-04-07":1430.16,"2026-04-08":1424.45,"2026-04-09":1420.86,"2026-04-10":1412.5,"2026-04-13":1404.47,"2026-04-14":1412.09,"2026-04-15":1398.53,"2026-04-16":1406.23,"2026-04-17":1412.53,"2026-04-20":1414.73,"2026-04-21":1414.42,"2026-04-22":1419.84,"2026-04-23":1424.4,"2026-04-24":1438.34,"2026-04-27":1461.73,"2026-04-28":1447.18,"2026-04-29":1435.6,"2026-04-30":1442.43,"2026-05-01":1442.43,"2026-05-04":1440.54,"2026-05-05":1429.65,"2026-05-06":1427.88,"2026-05-07":1427.48,"2026-05-08":1427.13,"2026-05-11":1425.02,"2026-05-12":1418.91,"2026-05-13":1425.77,"2026-05-14":1418.81,"2026-05-15":1426.5,"2026-05-18":1428.41,"2026-05-19":1433.99,"2026-05-20":1431.71,"2026-05-21":1426.11,"2026-05-22":1431.92,"2026-05-25":1431.92,"2026-05-26":1432.61,"2026-05-27":1429.73,"2026-05-28":1432.63,"2026-05-29":1434.42,"2026-06-01":1438.6,"2026-06-02":1451.54,"2026-06-03":1461.18,"2026-06-04":1456.92,"2026-06-05":1458.79,"2026-06-08":1467.09,"2026-06-09":1457.96,"2026-06-10":1452.3,"2026-06-11":1449.23,"2026-06-12":1450.36,"2026-06-15":1450.36,"2026-06-16":1453.73,"2026-06-17":1461.63,"2026-06-18":1468.31,"2026-06-19":1477.03,"2026-06-22":1484.64,"2026-06-23":1506.68,"2026-06-24":1505.75,"2026-06-25":1499.38,"2026-06-26":1499.3,"2026-06-29":1509.87,"2026-06-30":1521.37,"2026-07-01":1521.03,"2026-07-02":1529.77,"2026-07-03":1524.53,"2026-07-06":1525.47,"2026-07-07":1529.19,"2026-07-08":1529.66,"2026-07-09":1529.66,"2026-07-10":1523.44,"2026-07-13":1519.76,"2026-07-14":1507.57,"2026-07-15":1514.11,"2026-07-16":1512.49,"2026-07-17":1519.39,"2026-07-20":1512.35,"2026-07-21":1509.85,"2026-07-22":1513.61,"2026-07-23":1519.12,"2026-07-24":1532.63,"2026-07-27":1533.04,"2026-07-28":1533.5,"2026-07-29":1524.06,"2026-07-30":1508.43,"2026-07-31":1517.67,"2026-08-03":1527.87,"2026-08-04":1520.94,"2026-08-05":1518.45,"2026-08-06":1520.28,"2026-08-07":1524.77,"2026-08-10":1526.26,"2026-08-11":1523.84,"2026-08-12":1525.19,"2026-08-13":1520.94,"2026-08-14":1514.78,"2026-08-17":1514.78,"2026-08-18":1517.76,"2026-08-19":1522.29,"2026-08-20":1524.57,"2026-08-21":1535.08,"2026-08-24":1538.43,"2026-08-25":1538.74,"2026-08-26":1542.96,"2026-08-27":1536.34,"2026-08-28":1537.49,"2026-08-31":1535.52,"2026-09-01":1532.71,"2026-09-02":1534.3,"2026-09-03":1528.13,"2026-09-04":1525.39,"2026-09-07":1528.21,"2026-09-08":1527.81,"2026-09-09":1532.55,"2026-09-10":1536.39,"2026-09-11":1538.16,"2026-09-14":1534.1,"2026-09-15":1532.45,"2026-09-16":1537.56,"2026-09-17":1533.83,"2026-09-18":1538.32,"2026-09-21":1534.44,"2026-09-22":1536.51,"2026-09-23":1541.89,"2026-09-24":1544.35,"2026-09-25":1552.5,"2026-09-28":1555.31,"2026-09-29":1549.36,"2026-09-30":1542.56,"2026-10-01":1552.44,"2026-10-02":1549.26,"2026-10-05":1538.39,"2026-10-06":1541.11};
+// Datos de marca. Editá este archivo para cambiar nombre, textos o contacto.
+const BRAND = {
+  name: 'PROSPEI Consultores Financieros',
+  short: 'PROSPEI',
+  tagline: 'Informe de rentabilidad de tu cartera Balanz',
+  // Si completás alguno de estos, aparece un botón de contacto debajo del informe.
+  contactUrl: '',        // ej.: 'https://wa.me/5491100000000'
+  contactLabel: 'Hablar con un asesor',
+  disclaimer:
+    'Informe generado automáticamente por PROSPEI Consultores Financieros a partir de los archivos provistos por el inversor. ' +
+    'Tiene fines informativos y no constituye una recomendación de inversión; rentabilidades pasadas no garantizan resultados futuros. ' +
+    'Ante cualquier diferencia, prevalecen los registros de Balanz.',
+};
+
+// Extrae líneas de texto de un PDF (pdf.js) agrupando por coordenada vertical.
+// Separa columnas con dos espacios cuando hay un hueco grande entre fragmentos.
+async function pdfToLines(pdfjs, data) {
+  const doc = await pdfjs.getDocument({ data, isEvalSupported: false, useSystemFonts: true }).promise;
+  const lines = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const tc = await page.getTextContent();
+    const items = tc.items.filter(i => i.str && i.str.trim() !== '').map(i => ({
+      s: i.str, x: i.transform[4], y: i.transform[5], w: i.width, h: Math.abs(i.transform[3]) || 8,
+    }));
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const rows = [];
+    for (const it of items) {
+      const r = rows.find(r => Math.abs(r.y - it.y) <= Math.max(2, it.h * 0.35));
+      if (r) r.items.push(it); else rows.push({ y: it.y, items: [it] });
+    }
+    rows.sort((a, b) => b.y - a.y);
+    for (const r of rows) {
+      r.items.sort((a, b) => a.x - b.x);
+      let out = '', end = null;
+      for (const it of r.items) {
+        if (end !== null) {
+          const gap = it.x - end;
+          out += gap > it.h * 0.9 ? '  ' : (gap > it.h * 0.12 && !out.endsWith(' ') && !it.s.startsWith(' ') ? ' ' : '');
+        }
+        out += it.s; end = it.x + it.w;
+      }
+      lines.push(out.replace(/\s+$/, '').replace(/^\s+/, ' '));
+    }
+  }
+  return lines;
+}
+
+// Lectores de los archivos de Balanz: Excel de movimientos y PDF de resumen de cuenta.
+
+const normTicker = t =>
+  String(t ?? '').trim().replace(/\s+/g, '').replace(/\.$/, '').toUpperCase();
+
+const iso = v => {
+  if (v instanceof Date) {
+    // SheetJS entrega fechas a medianoche local; tomar componentes UTC corrido medio día evita saltos de huso.
+    const d = new Date(v.getTime() + 12 * 3600e3);
+    return d.toISOString().slice(0, 10);
+  }
+  const s = String(v ?? '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  if (/^\d+(\.\d+)?$/.test(s)) { // número de serie de Excel
+    const d = new Date(Date.UTC(1899, 11, 30) + Number(s) * 864e5);
+    return d.toISOString().slice(0, 10);
+  }
+  return null;
+};
+
+const num = v => {
+  if (typeof v === 'number') return v;
+  const s = String(v ?? '').trim();
+  if (s === '') return 0;
+  if (/,\d{1,2}$/.test(s) || /\.\d{3},/.test(s)) return Number(s.replace(/\./g, '').replace(',', '.'));
+  return Number(s.replace(/,/g, ''));
+};
+
+const REQUIRED = ['Concertacion', 'Tipo', 'Descripcion', 'Liquidacion', 'Moneda', 'Importe'];
+
+// rows: arreglo de objetos (una fila del Excel por objeto, claves = encabezados)
+function parseMovements(rows) {
+  if (!rows.length) throw new Error('El Excel de movimientos está vacío.');
+  const keys = Object.keys(rows[0]).map(k => k.trim());
+  const missing = REQUIRED.filter(k => !keys.includes(k));
+  if (missing.length) throw new Error(`El Excel no parece ser el de Movimientos de Balanz (faltan columnas: ${missing.join(', ')}).`);
+  const get = (r, k) => { for (const kk of Object.keys(r)) if (kk.trim() === k) return r[kk]; };
+  return rows.map(r => ({
+    conc: iso(get(r, 'Concertacion')),
+    liq: iso(get(r, 'Liquidacion')) || iso(get(r, 'Concertacion')),
+    tipo: String(get(r, 'Tipo') ?? '').trim(),
+    desc: String(get(r, 'Descripcion') ?? '').trim(),
+    ticker: normTicker(get(r, 'Ticker')),
+    qty: num(get(r, 'Cantidad')),
+    price: num(get(r, 'Precio')),
+    cur: String(get(r, 'Moneda') ?? '').trim(),
+    amt: num(get(r, 'Importe')),
+  })).filter(m => m.conc && m.cur && m.cur !== 'nan' && m.cur !== 'undefined');
+}
+
+// lines: renglones de texto del PDF (ver pdftext.js)
+function parseStatement(lines) {
+  const text = lines.join('\n');
+  if (!/Posici[oó]n consolidada/i.test(text)) throw new Error('El PDF no parece ser un resumen de cuenta de Balanz ("Posición consolidada").');
+  const intl = /I\s*N\s*T\s*E\s*R\s*N\s*A\s*T\s*I\s*O\s*N\s*A\s*L/.test(text);
+  // En Balanz International los importes vienen con formato 1,234.56; en Balanz Argentina 1.234,56.
+  const money = s => intl ? Number(s.replace(/,/g, '')) : Number(s.replace(/\./g, '').replace(',', '.'));
+
+  const st = { intl, holdings: [], name: null, account: null, date: null, total: null, totalCur: null, mep: null, cash: [] };
+
+  for (const l of lines) {
+    let m;
+    if (!st.date && (m = l.match(/Fecha resumen\s+(\d{2})\/(\d{2})\/(\d{4})/))) st.date = `${m[3]}-${m[2]}-${m[1]}`;
+    if (!st.account && (m = l.match(/N° Comitente\s+(\d+)/))) st.account = m[1];
+    if (st.total === null && (m = l.match(/^\s*Total\s+(USD|\$)\s*(-?[\d.,]+)\s*$/))) { st.totalCur = m[1] === '$' ? 'ARS' : 'USD'; st.total = money(m[2]); }
+    if (!st.mep && (m = l.match(/MEP\s*\$\s*([\d.,]+)/))) st.mep = money(m[1]);
+    if ((m = l.match(/^\s*(.+?)\s{2,}Titular(\s|$)/))) st.name = m[1].trim();
+    if (!st.name && (m = l.match(/^\s*Cuenta\s{2,}(.+?)\s{2,}Fecha resumen/))) st.nameFallback = m[1].trim();
+  }
+  if (!st.name) st.name = st.nameFallback || 'Cliente';
+
+  // Tenencias: renglones bajo un encabezado "Especie  Descripción ... Valor Actual"; la categoría es el renglón previo.
+  let cat = null, inTable = false, prev = '';
+  for (const l of lines) {
+    const t = l.trim();
+    if (/^Especie\s{2,}Descripci[oó]n/.test(t)) { cat = prev.trim(); inTable = true; prev = l; continue; }
+    if (inTable) {
+      const m = t.match(/^(\S+)\s{2,}(.+?)\s{2,}.*?(?:USD|\$)\s*(-?[\d.,]+)$/);
+      if (m && /\d/.test(m[3]) && /\s0[.,]00\s/.test(t)) {
+        st.holdings.push({ ticker: normTicker(m[1]), desc: m[2].trim(), value: money(m[3]), category: cat });
+      } else if (!/^(Especie|BALANZ|Posici)/.test(t)) {
+        inTable = false;
+      }
+    }
+    prev = l;
+  }
+  // Saldos líquidos del bloque "Monedas"
+  for (const l of lines) {
+    const re = /(Pesos|D[oó]lares(?: C\.?V\.? ?7000)?|US Dollar \(Cable\))\s+(USD|\$)\s*(-?[\d.,]+)/g;
+    let m;
+    while ((m = re.exec(l))) st.cash.push({ cur: m[1], amount: money(m[3]) });
+  }
+  if (st.total === null) throw new Error('No encontré el total de la cartera en el resumen de cuenta.');
+  if (st.totalCur === 'ARS' && !st.mep) throw new Error('El resumen está en pesos pero no encontré el tipo de cambio MEP.');
+  st.cur = st.totalCur;
+  return st;
+}
+
+// Motor de cálculo del informe de rentabilidad.
+// Reglas (las mismas que se aplicaron a mano en los informes de referencia):
+//  - Aportes = Tesorería "Recibo de Cobro"; retiros = Tesorería "Comprobante de Pago".
+//  - Los renglones espejo de fondos ("Suscripción desde Balanz" / "Rescate a Balanz") se descartan.
+//  - Todo se expresa en dólares: los importes en pesos se convierten al MEP del día de liquidación;
+//    el valor final usa el MEP del resumen de cuenta.
+//  - Cauciones (APCOLCON/APCOLFUT) se agrupan aparte; compra/venta de un mismo bono en pesos y dólares
+//    el mismo día (o dólar MEP contra cable) se toma como conversión de moneda, no como inversión.
+//  - Lo que no es inversión ni flujo (diferencias de cambio sobre pesos, costo de conversiones)
+//    se muestra como "efecto cambiario".
+
+const MIRROR = new Set(['Suscripción desde Balanz', 'Rescate a Balanz']);
+const isARS = cur => cur === 'Pesos';
+const days = (a, b) => (Date.parse(b) - Date.parse(a)) / 864e5;
+
+function makeRateLookup(rates) {
+  const dates = Object.keys(rates).sort();
+  return function mep(date) {
+    // último valor disponible en o antes de la fecha
+    let lo = 0, hi = dates.length - 1, ans = -1;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (dates[mid] <= date) { ans = mid; lo = mid + 1; } else hi = mid - 1; }
+    if (ans < 0) return { rate: rates[dates[0]], date: dates[0], gap: days(date, dates[0]) };
+    return { rate: rates[dates[ans]], date: dates[ans], gap: days(dates[ans], date) };
+  };
+}
+
+function xirr(flows) { // flows: [{date, amount}] (aportes negativos, valor final positivo)
+  const t0 = flows[0].date;
+  const f = r => flows.reduce((s, c) => s + c.amount / Math.pow(1 + r, days(t0, c.date) / 365), 0);
+  let lo = -0.99, hi = 10, flo = f(lo), fhi = f(hi);
+  if (flo * fhi > 0) return null;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2, fm = f(mid);
+    if (Math.abs(fm) < 1e-9) return mid;
+    if (flo * fm < 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+  }
+  return (lo + hi) / 2;
+}
+
+function needsMep(movs, st) {
+  return st.cur === 'ARS' || movs.some(m => isARS(m.cur) && m.amt !== 0);
+}
+
+function analyze({ movs, st, rates, initial = null }) {
+  const warnings = [];
+  const endDate = st.date || movs.map(m => m.liq).sort().at(-1);
+  const lookup = rates ? makeRateLookup(rates) : null;
+  const gapsSeen = new Set();
+  const mep = date => {
+    const r = lookup(date);
+    if (r.gap > 7 && !gapsSeen.has(date.slice(0, 7))) {
+      gapsSeen.add(date.slice(0, 7));
+      warnings.push(`No hay cotización del MEP cerca del ${fmtDate(date)}; se usó la del ${fmtDate(r.date)}.`);
+    }
+    return r.rate;
+  };
+  const endMep = st.cur === 'ARS' ? st.mep : (st.mep || null);
+
+  const rows = movs.filter(m => !MIRROR.has(m.desc) && m.amt !== 0);
+  for (const m of rows) m.usd = isARS(m.cur) ? m.amt / mep(m.liq) : m.amt;
+
+  // --- Clasificación ---------------------------------------------------------
+  const boletoNum = m => { const x = m.desc.match(/Boleto\s*\/\s*(\d+)/); return x ? Number(x[1]) : null; };
+  // compras de dólar MEP: mismo bono, mismo día, cantidad neta cero, una pata en pesos y otra en dólares
+  const fxKeys = new Set();
+  {
+    const groups = {};
+    for (const m of rows) {
+      if (m.tipo !== 'Boleto' || /APCOL/.test(m.desc) || !m.ticker) continue;
+      const k = m.ticker + '|' + m.conc;
+      (groups[k] ||= { boletos: {}, curs: new Set() });
+      const b = boletoNum(m);
+      groups[k].boletos[b] = m.qty;
+      if (m.price !== -1) groups[k].curs.add(m.cur);
+    }
+    for (const [k, g] of Object.entries(groups)) {
+      const net = Object.values(g.boletos).reduce((s, q) => s + q, 0);
+      if (Object.keys(g.boletos).length >= 2 && Math.abs(net) < 1e-6 && g.curs.size >= 2) fxKeys.add(k);
+    }
+  }
+  for (const m of rows) {
+    if (m.tipo === 'Tesorería') m.kind = 'flow';
+    else if (/APCOL/.test(m.desc)) m.kind = 'caucion';
+    else if (m.tipo === 'Boleto' && fxKeys.has(m.ticker + '|' + m.conc)) m.kind = 'fx';
+    else if (m.tipo === 'Movimiento') {
+      const t = m.desc.match(/\s-\s*([A-Z0-9.]+)\s*$/);
+      if (/Renta CV|a Cable|Cable a/i.test(m.desc)) m.kind = 'fx';
+      else if (t) { m.kind = 'inst'; m.ticker = t[1].replace(/\.$/, ''); }
+      else m.kind = 'other';
+    } else if (m.ticker) m.kind = 'inst';
+    else m.kind = 'other';
+  }
+
+  // --- Flujos del cliente ----------------------------------------------------
+  const flows = rows.filter(m => m.kind === 'flow').map(m => ({ date: m.liq, cur: m.cur, amt: m.amt, usd: m.usd, desc: m.desc }));
+  if (initial && initial.value) flows.unshift({ date: initial.date, cur: 'USD', amt: initial.value, usd: initial.value, desc: 'Saldo inicial' });
+  flows.sort((a, b) => a.date.localeCompare(b.date));
+  if (!flows.length) throw new Error('No encontré aportes (Tesorería – Recibo de cobro) en el Excel.');
+  const deposits = flows.filter(f => f.usd > 0), withdrawals = flows.filter(f => f.usd < 0);
+  const sum = (a, k = 'usd') => a.reduce((s, x) => s + x[k], 0);
+  const net = sum(flows);
+
+  // --- Valor final ------------------------------------------------------------
+  const toUSD = v => st.cur === 'ARS' ? v / endMep : v;
+  const V = toUSD(st.total);
+  const gain = V - net;
+
+  const cf = {};
+  for (const f of flows) cf[f.date] = (cf[f.date] || 0) - f.usd;
+  const irrFlows = Object.entries(cf).sort().map(([date, amount]) => ({ date, amount }));
+  irrFlows.push({ date: endDate, amount: V });
+  const irr = xirr(irrFlows);
+
+  // --- Resultado por especie -------------------------------------------------
+  const holdings = {};
+  for (const h of st.holdings) holdings[h.ticker] = (holdings[h.ticker] || 0) + toUSD(h.value);
+  const inst = {};
+  for (const m of rows.filter(m => m.kind === 'inst')) {
+    const g = (inst[m.ticker] ||= { ticker: m.ticker, flujo: 0, renta: 0, invertido: 0, cobrado: 0, sells: 0, buys: 0 });
+    g.flujo += m.usd;
+    if (m.tipo === 'Liquidación Fondo' && !g.name) g.name = m.desc.split('/').pop().trim();
+    if (m.tipo === 'Dividendo' || m.tipo === 'Cupón' || m.tipo === 'Movimiento') g.renta += m.usd;
+    else if (m.usd < 0) g.invertido -= m.usd; else g.cobrado += m.usd;
+    if (m.price !== -1 && m.qty < 0) g.sells++;
+    if (m.qty > 0) g.buys++;
+  }
+  const hdesc = {};
+  for (const h of st.holdings) hdesc[h.ticker] = h.desc;
+  for (const t of Object.keys(holdings)) if (!inst[t]) {
+    inst[t] = { ticker: t, flujo: 0, renta: 0, invertido: 0, cobrado: 0, sells: 0, buys: 0, noMovs: true };
+    warnings.push(`${t} figura en la cartera pero no tiene movimientos en el Excel: su valor completo se cuenta como ganancia. Revisá que el Excel cubra desde la apertura de la cuenta.`);
+  }
+  const list = Object.values(inst).map(g => {
+    const actual = holdings[g.ticker] || 0;
+    const res = g.flujo + actual;
+    return { ...g, desc: hdesc[g.ticker] || g.name || null, actual, res, precio: res - g.renta, capital: g.invertido - g.cobrado, open: actual > 0 };
+  });
+  const open = list.filter(g => g.open).sort((a, b) => b.res - a.res);
+  const closed = list.filter(g => !g.open && (g.invertido > 0.5 || Math.abs(g.res) > 0.5)).sort((a, b) => b.res - a.res);
+  const partial = open.filter(g => g.sells > 0).map(g => g.ticker);
+
+  // --- Cauciones -------------------------------------------------------------
+  const cau = rows.filter(m => m.kind === 'caucion');
+  const pairs = [];
+  {
+    const byNum = new Map(cau.map(m => [boletoNum(m), m]));
+    for (const m of cau.filter(m => m.amt < 0)) {
+      const f = byNum.get(boletoNum(m) + 1);
+      if (f && f.amt > 0) pairs.push({ ini: m.liq, fin: f.liq, colocado: -m.amt, cobrado: f.amt, cur: m.cur, intUSD: (f.amt + m.amt) / (isARS(f.cur) ? mep(f.liq) : 1) });
+    }
+  }
+  const caucion = pairs.length ? {
+    n: pairs.length,
+    interes: sum(pairs, 'intUSD'),
+    interesARS: pairs.filter(p => isARS(p.cur)).reduce((s, p) => s + p.cobrado - p.colocado, 0),
+    tna: pairs.reduce((s, p) => s + (p.cobrado / p.colocado - 1) * 365 / Math.max(1, days(p.ini, p.fin)), 0) / pairs.length,
+  } : null;
+
+  // --- Puente de la ganancia ------------------------------------------------
+  const renta = list.reduce((s, g) => s + g.renta, 0);
+  const closedPrice = closed.reduce((s, g) => s + g.precio, 0);
+  const openPrice = open.reduce((s, g) => s + g.precio, 0);
+  const cauI = caucion ? caucion.interes : 0;
+  const fx = gain - closedPrice - openPrice - renta - cauI;
+  const bridge = [
+    { label: withdrawals.length ? 'Aportes netos' : 'Aportes', value: net, kind: 'total' },
+    { label: 'Ventas realizadas', value: closedPrice, kind: 'step' },
+    { label: 'Posiciones abiertas', value: openPrice, kind: 'step' },
+    { label: 'Dividendos y cupones', value: renta, kind: 'step' },
+  ];
+  if (caucion) bridge.push({ label: 'Cauciones', value: cauI, kind: 'step' });
+  if (Math.abs(fx) >= 1) bridge.push({ label: 'Efecto cambiario', value: fx, kind: 'step' });
+  bridge.push({ label: 'Valor actual', value: V, kind: 'end' });
+
+  // --- Composición -------------------------------------------------------------
+  const CAT = { Acciones: 'Acciones y ETFs', Cedears: 'Cedears', Corporativos: 'Obligaciones negociables', Bonos: 'Bonos', Fondos: 'Fondos', Letras: 'Letras' };
+  const comp = {};
+  for (const h of st.holdings) {
+    const k = CAT[h.category] || h.category || 'Otros';
+    (comp[k] ||= { label: k, usd: 0, n: 0, tickers: [] });
+    comp[k].usd += toUSD(h.value); comp[k].n++; comp[k].tickers.push(h.ticker);
+  }
+  const holdSum = st.holdings.reduce((s, h) => s + h.value, 0);
+  const cashUSD = toUSD(st.total - holdSum);
+  const composition = Object.values(comp).sort((a, b) => b.usd - a.usd);
+  if (Math.abs(cashUSD) >= 1) composition.push({ label: 'Liquidez', usd: cashUSD, n: 0, tickers: [] });
+  composition.sort((a, b) => b.usd - a.usd);
+  const top = st.holdings.map(h => ({ ticker: h.ticker, desc: h.desc, usd: toUSD(h.value) })).sort((a, b) => b.usd - a.usd);
+
+  // --- Control de caja: los movimientos deben explicar la liquidez del resumen --
+  const cashCheck = [];
+  {
+    const byCur = {};
+    for (const m of movs.filter(m => !MIRROR.has(m.desc))) byCur[m.cur] = (byCur[m.cur] || 0) + m.amt;
+    const stCash = {};
+    for (const c of st.cash) stCash[c.cur] = c.amount;
+    const totMov = Object.entries(byCur).reduce((s, [c, v]) => s + (isARS(c) ? v / (endMep || 1) : v), 0);
+    const totSt = Object.entries(stCash).reduce((s, [c, v]) => s + (isARS(c) ? v / (endMep || 1) : v), 0);
+    cashCheck.push({ ok: Math.abs(totMov - totSt) < Math.max(2, Math.abs(totSt) * 0.001), byCur, stCash, diffUSD: totMov - totSt });
+    if (st.cash.length && !cashCheck[0].ok) warnings.push(`La liquidez que surge de los movimientos no coincide con la del resumen (diferencia aprox. USD ${Math.round(cashCheck[0].diffUSD).toLocaleString('es-AR')}). Puede faltar algún movimiento en el Excel o haber movimientos posteriores a la fecha del resumen.`);
+  }
+
+  // --- Ganancia en pesos (si hubo pesos) --------------------------------------
+  let gainARS = null;
+  const anyARS = st.cur === 'ARS' || rows.some(m => isARS(m.cur));
+  if (anyARS && endMep) {
+    const netARS = flows.reduce((s, f) => s + (isARS(f.cur) ? f.amt : f.usd * mep(f.date)), 0);
+    gainARS = (st.cur === 'ARS' ? st.total : st.total * endMep) - netARS;
+  }
+
+  // --- Flujos para la tabla -------------------------------------------------
+  let acc = 0;
+  const flowRows = flows.map(f => ({ ...f, acum: (acc += f.usd) }));
+  const months = {};
+  for (const f of flows) {
+    const k = f.date.slice(0, 7);
+    (months[k] ||= { mes: k, aportes: 0, retiros: 0 });
+    if (f.usd > 0) months[k].aportes += f.usd; else months[k].retiros -= f.usd;
+  }
+  acc = 0;
+  const monthRows = Object.values(months).sort((a, b) => a.mes.localeCompare(b.mes)).map(m => ({ ...m, neto: m.aportes - m.retiros, acum: (acc += m.aportes - m.retiros) }));
+
+  const pesoFlows = flows.filter(f => isARS(f.cur));
+  return {
+    client: { name: st.name, account: st.account, intl: st.intl },
+    date: endDate, start: flows[0].date, cur: st.cur, endMep, anyARS,
+    totals: {
+      deposits: sum(deposits), withdrawals: -sum(withdrawals), net, V, gain, irr,
+      simple: net > 0 ? gain / net : null, renta, nDep: deposits.length, nWd: withdrawals.length,
+      depARS: deposits.filter(f => isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
+      depUSD: deposits.filter(f => !isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
+      wdARS: -withdrawals.filter(f => isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
+      wdUSD: -withdrawals.filter(f => !isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
+      totalOrig: st.total, gainARS, hasPesoFlows: pesoFlows.length > 0,
+    },
+    bridge, open, closed, partial, caucion, composition, top, cashCheck, warnings,
+    flows: flowRows, months: monthRows,
+  };
+}
+
+function fmtDate(iso) { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+
+// Arma el HTML del informe a partir del resultado del motor.
+
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nf = (v, d = 0) => (Math.abs(v) < 0.5 * 10 ** -d ? 0 : v).toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const n = (v, d = 0) => (v < 0 && Math.abs(v) >= 0.5 * 10 ** -d ? '−' : '') + nf(Math.abs(v), d);
+const sg = (v, d = 0) => (v >= 0.5 * 10 ** -d ? '+' : '') + n(v, d);
+const pc = (v, d = 1) => sg(v * 100, d) + '%';
+const usd = (v, d = 0) => (v < 0 ? '−' : '') + 'USD ' + nf(Math.abs(v), d);
+const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const monthLabel = ym => `${MES[+ym.slice(5, 7) - 1]}-${ym.slice(2, 4)}`;
+const longMonth = iso => `${MESL[+iso.slice(5, 7) - 1]} de ${iso.slice(0, 4)}`;
+const titleCase = s => s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+const listEs = a => a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a.at(-1);
+
+function bridgeSVG(bridge) {
+  const W = 760, H = 330, x0 = 20, y0 = 30, h = 240;
+  const steps = bridge.filter(b => b.kind === 'step');
+  let run = 0; const levels = [];
+  for (const b of bridge) {
+    if (b.kind === 'total') { run = b.value; levels.push([0, run]); }
+    else if (b.kind === 'step') { const a = run; run += b.value; levels.push([a, run]); }
+    else levels.push([0, b.value]);
+  }
+  const maxV = Math.max(...levels.flat());
+  const minTop = Math.min(...levels.slice(1, -1).flat(), bridge[0].value, bridge.at(-1).value);
+  const stepMag = steps.reduce((s, b) => s + Math.abs(b.value), 0);
+  const cut = stepMag > 0 && bridge[0].value > 6 * stepMag; // los pasos serían invisibles: se corta el eje
+  const base = cut ? Math.max(0, minTop - stepMag * 0.6) : 0;
+  const top = maxV + (maxV - base) * 0.12;
+  const y = v => y0 + h - (v - base) / (top - base) * h;
+  const band = (W - 2 * x0) / bridge.length, bw = band * 0.58;
+  let out = `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Puente de la ganancia">`;
+  out += `<line x1="${x0}" x2="${W - x0}" y1="${y0 + h}" y2="${y0 + h}" class="axis"/>`;
+  bridge.forEach((b, i) => {
+    const [a, c] = levels[i];
+    const lo = b.kind === 'step' ? Math.min(a, c) : base, hi = b.kind === 'step' ? Math.max(a, c) : c;
+    const cls = b.kind === 'step' ? (b.value >= 0 ? 'up' : 'down') : 'tot';
+    const x = x0 + i * band + (band - bw) / 2;
+    out += `<rect x="${x}" y="${y(hi)}" width="${bw}" height="${Math.max(2, y(lo) - y(hi))}" class="${cls}"><title>${esc(b.label)}: ${usd(b.value)}</title></rect>`;
+    out += `<text x="${x + bw / 2}" y="${y(hi) - 7}" class="val">${b.kind === 'step' ? sg(b.value) : n(b.value)}</text>`;
+    const words = b.label.split(' ');
+    const l1 = words.length > 1 ? words.slice(0, Math.ceil(words.length / 2)).join(' ') : b.label;
+    const l2 = words.length > 1 ? words.slice(Math.ceil(words.length / 2)).join(' ') : '';
+    out += `<text x="${x + bw / 2}" y="${y0 + h + 18}" class="lab">${esc(l1)}</text>`;
+    if (l2) out += `<text x="${x + bw / 2}" y="${y0 + h + 32}" class="lab">${esc(l2)}</text>`;
+    if (i < bridge.length - 1) {
+      const nx = x0 + (i + 1) * band + (band - bw) / 2;
+      out += `<line x1="${x + bw}" x2="${nx}" y1="${y(c)}" y2="${y(c)}" class="conn"/>`;
+    }
+  });
+  if (cut) out += `<text x="${x0}" y="${y0 + h - 6}" class="note" text-anchor="start">Eje cortado: arranca en USD ${n(base)}</text>`;
+  return out + '</svg>';
+}
+
+function barsSVG(items) {
+  const W = 760, rh = 24, y0 = 26, labW = 200, xl = labW + 20, xr = W - 130;
+  const vals = items.map(i => i.res);
+  const hi = Math.max(0, ...vals), lo = Math.min(0, ...vals);
+  const span = hi - lo || 1;
+  const zx = xl + (-lo) / span * (xr - xl);
+  const sx = v => v / span * (xr - xl);
+  const H = y0 + items.length * rh + 8;
+  let out = `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Resultado por activo">`;
+  out += `<text x="${labW}" y="14" class="colhead" text-anchor="end">Valor hoy (USD)</text>`;
+  out += `<line x1="${zx}" x2="${zx}" y1="${y0 - 6}" y2="${H - 6}" class="axis"/>`;
+  items.forEach((g, i) => {
+    const yy = y0 + i * rh;
+    const w = Math.max(1.5, Math.abs(sx(g.res)));
+    const x = g.res >= 0 ? zx : zx - w;
+    const pct = g.capital > 1 ? ` (${pc(g.res / g.capital, 0)})` : '';
+    out += `<text x="0" y="${yy + 15}" class="tk">${esc(g.ticker)}</text>`;
+    out += `<text x="${labW}" y="${yy + 15}" class="num" text-anchor="end">${n(g.actual)}</text>`;
+    out += `<rect x="${x}" y="${yy + 4}" width="${w}" height="${rh - 9}" class="${g.res >= 0 ? 'up' : 'down'}"><title>${esc(g.ticker)}: ${usd(g.res)}${pct}</title></rect>`;
+    out += `<text x="${g.res >= 0 ? zx + w + 6 : zx + 6}" y="${yy + 15}" class="num">${sg(g.res)}${pct}</text>`;
+  });
+  return out + '</svg>';
+}
+
+function table(head, rows, opts = {}) {
+  const right = opts.right ?? head.map((_, i) => i > 0);
+  const th = head.map((h, i) => `<th class="${right[i] ? 'r' : ''}">${h}</th>`).join('');
+  const tb = rows.map((r, ri) => `<tr class="${opts.boldLast && ri === rows.length - 1 ? 'b' : ''}">${r.map((c, i) => `<td class="${right[i] ? 'r' : ''}">${c}</td>`).join('')}</tr>`).join('');
+  return `<table><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
+}
+
+function renderReport(r, brand) {
+  const t = r.totals;
+  const mepTxt = r.anyARS ? ' MEP' : '';
+  const name = titleCase(r.client.name);
+  const gained = t.gain >= 0;
+  const hasWd = t.nWd > 0;
+  const netLbl = hasWd ? 'neto aportado' : 'aportados';
+
+  let h = `<header class="rep-head">
+    <div class="brand-line">${esc(brand.name)}</div>
+    <h1>Informe de rentabilidad – Cartera de ${esc(name)}</h1>
+    <p class="meta">Al ${fmtDate(r.date)} · Cuenta Balanz${r.client.intl ? ' International' : ''} N° ${esc(r.client.account || '—')} · Valores en dólares${mepTxt}</p>
+  </header>`;
+
+  // Resumen
+  const lead = `Desde la primera inversión (${longMonth(r.start)}) la cartera ${gained ? 'ganó' : 'perdió'} <b>${usd(Math.abs(t.gain))} (${pc(t.simple ?? 0)})</b> sobre ${hasWd ? 'un neto aportado de ' : ''}${usd(t.net)}${hasWd ? '' : ' aportados'}${t.irr !== null ? `, equivalente a una <b>TIR de ${n(t.irr * 100, 1)}% anual en dólares${mepTxt}</b>` : ''}.`;
+  const rows = [['Saldo inicial', 'USD 0']];
+  const depDetail = t.hasPesoFlows ? ` (${t.nDep} ingresos: ARS ${n(t.depARS / 1e6, 1)} M y USD ${n(t.depUSD)})` : ` (${t.nDep} ingresos)`;
+  rows.push(['Aportes' + depDetail, usd(t.deposits, 2)]);
+  if (hasWd) {
+    const wdDetail = t.hasPesoFlows ? ` (${t.nWd} egresos: ARS ${n(t.wdARS / 1e6, 1)} M y USD ${n(t.wdUSD)})` : ` (${t.nWd} egresos)`;
+    rows.push(['Retiros' + wdDetail, usd(-t.withdrawals, 2)], ['Neto aportado', usd(t.net, 2)]);
+  }
+  rows.push([`Valor de la cartera al ${fmtDate(r.date)}${r.cur === 'ARS' ? ` (ARS ${n(t.totalOrig)})` : ''}`, usd(t.V, 2)]);
+  rows.push(['Ganancia total', usd(t.gain, 2)]);
+  rows.push([`Rendimiento sobre lo ${hasWd ? 'neto aportado' : 'aportado'}`, pc(t.simple ?? 0)]);
+  if (t.irr !== null) rows.push([`TIR anual en dólares${mepTxt} (ponderada por fecha de cada movimiento)`, pc(t.irr)]);
+  rows.push(['Dividendos y cupones cobrados', usd(t.renta, 2)]);
+  let notes = [];
+  if (r.anyARS) notes.push(`Los movimientos en pesos se convirtieron a dólares al MEP de cada fecha de liquidación; el valor final usa el MEP del resumen de Balanz ($ ${n(r.endMep, 2)}).${t.gainARS !== null ? ` Medida en pesos, la ganancia es de ARS ${n(t.gainARS / 1e6, 2)} millones.` : ''}`);
+  else notes.push('La TIR considera cuándo entró cada dólar: los aportes más recientes estuvieron invertidos menos tiempo.');
+  notes.push('Importes netos de comisiones, según los movimientos de Balanz.');
+  h += `<section><h2>Resumen</h2><p>${lead}</p>${table(['Concepto', 'Valor'], rows)}<p class="small">${notes.join(' ')}</p></section>`;
+
+  // Puente
+  const steps = r.bridge.filter(b => b.kind === 'step');
+  const gainParts = steps.filter(b => b.value > 0).sort((a, b) => b.value - a.value);
+  let bnote = `“Ventas realizadas” es la ganancia por precio de las posiciones ya cerradas; “Posiciones abiertas” es la diferencia entre lo pagado y el valor de mercado de lo que hoy está en cartera (sus dividendos y cupones van en su propia barra).`;
+  if (r.caucion) bnote += ` Las ${r.caucion.n} cauciones colocadas rindieron ${r.caucion.interesARS ? `ARS ${n(r.caucion.interesARS)}` : usd(r.caucion.interes)} (TNA promedio ${n(r.caucion.tna * 100, 1)}%).`;
+  if (steps.some(b => b.label === 'Efecto cambiario')) bnote += ' El efecto cambiario es la variación en dólares de los pesos mantenidos en la cuenta mientras se movía el MEP, más el costo de las conversiones de moneda.';
+  const headline = gained && gainParts.length ? `La mayor parte de la ganancia viene de ${gainParts[0].label.toLowerCase()} (${usd(gainParts[0].value)}).` : '';
+  h += `<section class="avoid"><h2>De dónde sale la ganancia</h2>${headline ? `<p>${headline}</p>` : ''}${bridgeSVG(r.bridge)}<p class="small">${bnote}</p></section>`;
+
+  // Composición
+  const V = t.V;
+  const compRows = r.composition.map(c => [`${esc(c.label)}${c.n ? ` (${c.n} ${c.n === 1 ? 'especie' : 'especies'})` : ''}`, n(c.usd), n(c.usd / V * 100, 1) + '%']);
+  compRows.push(['Total', n(V), '100%']);
+  const top3 = r.top.slice(0, 3);
+  h += `<section class="avoid"><h2>Composición actual</h2>${table(['Tipo de activo', 'Valor (USD)', '% de la cartera'], compRows, { boldLast: true })}
+    <p>Las mayores posiciones son ${listEs(top3.map(x => `${esc(x.ticker)} (${usd(x.usd)}, ${n(x.usd / V * 100, 1)}%)`))}.</p></section>`;
+
+  // Resultado por activo
+  if (r.open.length) {
+    const wins = r.open.filter(g => g.res > 0);
+    const losers = r.open.filter(g => g.res < 0).sort((a, b) => a.res - b.res);
+    const netOpen = r.open.reduce((s, g) => s + g.res, 0);
+    let p = `${wins.length} de ${r.open.length} especies en ganancia; resultado neto ${usd(netOpen)}.`;
+    if (wins.length) p += ` Lideran ${listEs(wins.slice(0, 3).map(g => esc(g.ticker)))}`;
+    if (losers.length) p += `${wins.length ? '; ' : ' '}las mayores pérdidas son ${listEs(losers.slice(0, 2).map(g => esc(g.ticker)))}`;
+    p += '. Resultado en USD y % sobre el capital invertido, incluye dividendos y cupones.';
+    const foot = [];
+    if (r.partial.length) foot.push(`En ${listEs(r.partial.map(esc))} el resultado incluye ventas parciales.`);
+    foot.push('Los bonos y ONs se valúan a precio de mercado; no se cuentan los cupones futuros.');
+    h += `<section class="avoid"><h2>Resultado por activo en cartera</h2><p>${p}</p>${barsSVG(r.open)}<p class="small">${foot.join(' ')}</p></section>`;
+  }
+
+  // Posiciones cerradas
+  if (r.closed.length) {
+    const tot = r.closed.reduce((s, g) => s + g.res, 0);
+    const best = r.closed[0];
+    h += `<section><h2>Posiciones cerradas</h2><p>Las ${r.closed.length} posiciones ya cerradas dejaron ${usd(tot)} de resultado (incluye su renta)${best && best.res > 0 ? `; la mayor ganancia vino de ${esc(best.ticker)}` : ''}.</p>
+    ${table(['Especie', 'Invertido', 'Cobrado', 'Div./cupones', 'Resultado'], r.closed.map(g => [`${esc(g.ticker)}${g.desc && !g.desc.startsWith(g.ticker) ? `<span class="sub"> ${esc(g.desc)}</span>` : ''}`, n(g.invertido), n(g.cobrado), n(g.renta), sg(g.res)]))}
+    <p class="small">Valores en USD${mepTxt}.</p></section>`;
+  }
+
+  // Aportes y retiros
+  const flowTitle = hasWd ? 'Aportes y retiros' : 'Aportes realizados';
+  let ft;
+  if (r.flows.length <= 15) {
+    ft = table(['Fecha', 'Tipo', r.anyARS ? 'Importe original' : 'Importe (USD)', 'Acumulado (USD)'],
+      [...r.flows].reverse().map(f => [fmtDate(f.date), f.usd >= 0 ? 'Aporte' : 'Retiro', r.anyARS ? `${f.cur === 'Pesos' ? 'ARS' : 'USD'} ${n(f.amt, 2)}` : n(f.amt, 2), n(f.acum, 2)]), { right: [false, false, true, true] });
+  } else {
+    ft = table(['Mes', 'Aportes (USD)', 'Retiros (USD)', 'Neto (USD)', 'Neto acumulado (USD)'],
+      r.months.map(m => [monthLabel(m.mes), n(m.aportes), n(m.retiros), sg(m.neto), n(m.acum)]));
+  }
+  h += `<section><h2>${flowTitle}${r.flows.length > 15 ? ' por mes' : ''}</h2><p>${hasWd ? `Ingresaron ${usd(t.deposits)} y se retiraron ${usd(t.withdrawals)}.` : `${t.nDep} ingresos de dinero suman ${usd(t.deposits, 2)}; no hubo retiros.`}</p>${ft}`;
+  const cc = r.cashCheck[0];
+  h += `<p class="small">${cc && cc.ok ? 'Control: la liquidez que surge de los movimientos coincide con la del resumen de cuenta. ' : ''}${r.anyARS ? 'Tipo de cambio MEP histórico: Ámbito Financiero. ' : ''}${esc(brand.disclaimer)}</p></section>`;
+
+  return h;
+}
+
+
+
+
+
+
+
+
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+
+const $ = s => document.querySelector(s);
+const files = { xlsx: null, pdf: null };
+let lastResult = null;
+
+$('#brand-name').textContent = BRAND.name;
+$('#foot-text').textContent = `© ${new Date().getFullYear()} ${BRAND.name}. ${BRAND.disclaimer}`;
+
+// --- Carga de archivos (clic o arrastrar) -----------------------------------
+for (const drop of document.querySelectorAll('.drop')) {
+  const key = drop.dataset.for;
+  const input = drop.querySelector('input');
+  const set = f => {
+    if (!f) return;
+    const ok = key === 'xlsx' ? /\.xlsx?$/i.test(f.name) : /\.pdf$/i.test(f.name);
+    if (!ok) { status(`Ese archivo no es un ${key === 'xlsx' ? 'Excel (.xlsx)' : 'PDF'}.`, true); return; }
+    files[key] = f;
+    drop.classList.add('ok');
+    drop.querySelector('.drop-file').textContent = '✓ ' + f.name;
+    status('');
+    $('#go').disabled = !(files.xlsx && files.pdf);
+  };
+  input.addEventListener('change', () => set(input.files[0]));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('over');
+    // si arrastran los dos juntos, se reparten solos
+    for (const f of e.dataTransfer.files) {
+      if (/\.xlsx?$/i.test(f.name)) setFor('xlsx', f); else if (/\.pdf$/i.test(f.name)) setFor('pdf', f); else set(f);
+    }
+  });
+  drop._set = set;
+}
+function setFor(key, f) { document.querySelector(`.drop[data-for="${key}"]`)._set(f); }
+
+function status(msg, err = false) {
+  const el = $('#status');
+  el.textContent = msg;
+  el.classList.toggle('err', err);
+}
+
+// --- Tipo de cambio MEP ---------------------------------------------------------
+async function loadRates(from, to) {
+  const rates = { ...MEP_INCLUIDO };
+  try {
+    const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa');
+    if (res.ok) for (const x of await res.json()) {
+      const d = String(x.fecha).slice(0, 10), v = Number(x.venta ?? x.compra);
+      if (d >= '2023-01-01' && v > 0) rates[d] = v;
+    }
+  } catch { /* se usa la serie incluida */ }
+  return rates;
+}
+
+// --- Generar --------------------------------------------------------------------
+$('#form').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#go').disabled = true;
+  try {
+    status('Leyendo el Excel de movimientos…');
+    const wb = XLSX.read(await files.xlsx.arrayBuffer(), { cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const movs = parseMovements(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
+
+    status('Leyendo el resumen de cuenta…');
+    const lines = await pdfToLines(pdfjs, new Uint8Array(await files.pdf.arrayBuffer()));
+    const st = parseStatement(lines);
+
+    let rates = null;
+    if (needsMep(movs, st)) {
+      status('Buscando el dólar MEP histórico…');
+      const dates = movs.map(m => m.liq).sort();
+      rates = await loadRates(dates[0], st.date || dates.at(-1));
+    }
+
+    status('Calculando…');
+    const r = analyze({ movs, st, rates });
+    lastResult = r;
+    $('#report').innerHTML = renderReport(r, BRAND);
+    $('#warnings').innerHTML = r.warnings.map(w => `<div class="warn">⚠️ ${w.replace(/</g, '&lt;')}</div>`).join('');
+    $('#contact').innerHTML = BRAND.contactUrl
+      ? `<div class="contact-cta"><a class="btn primary" href="${BRAND.contactUrl}" target="_blank" rel="noopener">${BRAND.contactLabel}</a></div>` : '';
+    $('#intake').hidden = true;
+    $('#result').hidden = false;
+    window.scrollTo({ top: 0 });
+    status('');
+  } catch (err) {
+    console.error(err);
+    status(err.message || 'No pude procesar los archivos.', true);
+  } finally {
+    $('#go').disabled = !(files.xlsx && files.pdf);
+  }
+});
+
+$('#again').addEventListener('click', () => {
+  $('#result').hidden = true;
+  $('#intake').hidden = false;
+  window.scrollTo({ top: 0 });
+});
+
+// --- PDF ----------------------------------------------------------------------------
+$('#download').addEventListener('click', async () => {
+  const btn = $('#download');
+  btn.disabled = true; btn.textContent = 'Generando PDF…';
+  const el = $('#report');
+  document.body.classList.add('exporting');
+  try {
+    const who = (lastResult?.client.name || 'cartera').toLowerCase().replace(/[^a-z0-9]+/gi, '_');
+    await html2pdf().set({
+      margin: [14, 14, 14, 14],
+      filename: `Informe_Rentabilidad_${who}_${lastResult?.date || ''}.pdf`,
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'], before: '.page-break-before', avoid: ['tr', '.avoid', 'svg', 'h2'] },
+    }).from(el).save();
+  } finally {
+    document.body.classList.remove('exporting');
+    btn.disabled = false; btn.textContent = 'Descargar PDF';
+  }
+});
+
+</script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-in">
+      <div class="logo"><span class="mark">P</span><span id="brand-name">PROSPEI Consultores Financieros</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="intake" class="wrap">
+      <div class="hero">
+        <p class="eyebrow">Herramienta gratuita</p>
+        <h1>¿Cuánto rindió realmente tu cartera?</h1>
+        <p class="lede">Subí dos archivos de Balanz y en segundos tenés tu informe: ganancia en dólares, TIR anual, de dónde salió el resultado y cómo le fue a cada activo.</p>
+      </div>
+
+      <form id="form" class="card" novalidate>
+        <div class="drops">
+          <label class="drop" data-for="xlsx">
+            <input type="file" id="xlsx" accept=".xlsx,.xls" hidden>
+            <span class="step">1</span>
+            <span class="drop-title">Movimientos</span>
+            <span class="drop-hint">Excel de movimientos desde la apertura de la cuenta</span>
+            <span class="drop-file" aria-live="polite">Elegí o arrastrá el archivo .xlsx</span>
+          </label>
+          <label class="drop" data-for="pdf">
+            <input type="file" id="pdf" accept=".pdf" hidden>
+            <span class="step">2</span>
+            <span class="drop-title">Resumen de cuenta</span>
+            <span class="drop-hint">PDF de “Posición consolidada” del día de hoy</span>
+            <span class="drop-file" aria-live="polite">Elegí o arrastrá el archivo .pdf</span>
+          </label>
+        </div>
+        <button type="submit" id="go" class="btn primary" disabled>Generar mi informe</button>
+        <p id="status" class="status" role="status"></p>
+        <p class="privacy">🔒 Tus archivos se procesan en tu propio navegador: no se suben ni se guardan en ningún servidor.</p>
+      </form>
+
+      <div class="how">
+        <h2>Cómo funciona</h2>
+        <ol>
+          <li><b>Aportes y retiros.</b> Se toman los ingresos (“Recibo de cobro”) y egresos (“Comprobante de pago”) de tu cuenta.</li>
+          <li><b>Todo en dólares.</b> Los movimientos en pesos se convierten al dólar MEP de cada día.</li>
+          <li><b>Rentabilidad real.</b> Calculamos la ganancia y la TIR anual, que tiene en cuenta cuándo entró y salió cada peso.</li>
+        </ol>
+        <p class="small">El cálculo supone que la cuenta empezó en cero, por eso el Excel tiene que incluir los movimientos desde la apertura.</p>
+      </div>
+    </section>
+
+    <section id="result" class="wrap" hidden>
+      <div class="toolbar">
+        <button id="again" class="btn ghost">← Nuevo informe</button>
+        <div class="tb-right">
+          <button id="download" class="btn primary">Descargar PDF</button>
+        </div>
+      </div>
+      <div id="warnings"></div>
+      <article id="report" class="paper"></article>
+      <div id="contact"></div>
+    </section>
+  </main>
+
+  <footer class="foot wrap"><p id="foot-text"></p></footer>
+</body>
+</html>
