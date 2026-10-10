@@ -472,7 +472,9 @@ function analyze({ movs, st, rates, st0 = null }) {
     const g = (inst[m.ticker] ||= { ticker: m.ticker, flujo: 0, renta: 0, invertido: 0, cobrado: 0, sells: 0, buys: 0 });
     g.flujo += m.usd;
     if (m.tipo === 'Liquidación Fondo' && !g.name) g.name = m.desc.split('/').pop().trim();
-    if (m.tipo === 'Dividendo' || m.tipo === 'Cupón' || m.tipo === 'Movimiento') g.renta += m.usd;
+    // "Amortización" (devolución de capital, ej. vencimiento de una letra) no es renta: cuenta como cobro
+    const amort = m.tipo === 'Cupón' && /^Amortizaci[oó]n/i.test(m.desc);
+    if (!amort && (m.tipo === 'Dividendo' || m.tipo === 'Cupón' || m.tipo === 'Movimiento')) g.renta += m.usd;
     else if (m.usd < 0) g.invertido -= m.usd; else g.cobrado += m.usd;
     if (m.price !== -1 && m.qty < 0) g.sells++;
     if (m.qty > 0) g.buys++;
