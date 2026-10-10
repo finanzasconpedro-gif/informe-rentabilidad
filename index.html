@@ -223,7 +223,9 @@ function parseMovements(rows) {
     price: num(get(r, 'Precio')),
     cur: String(get(r, 'Moneda') ?? '').trim(),
     amt: num(get(r, 'Importe')),
-  })).filter(m => m.conc && m.cur && m.cur !== 'nan' && m.cur !== 'undefined');
+  })).map(m => (m.cur === 'nan' || m.cur === 'undefined' ? { ...m, cur: '' } : m))
+    // se conservan los renglones sin moneda que mueven títulos (transferencias, canjes)
+    .filter(m => m.conc && (m.cur || (m.qty && m.ticker)));
 }
 
 // lines: renglones de texto del PDF (ver pdftext.js)
@@ -251,7 +253,15 @@ function parseStatement(lines) {
   let cat = null, inTable = false, prev = '';
   for (const l of lines) {
     const t = l.trim();
-    if (/^Especie\s{2,}Descripci[oó]n/.test(t)) { cat = prev.trim(); inTable = true; prev = l; continue; }
+    if (/^Especie\s{2,}Descripci[oó]n/.test(t)) {
+      // si el encabezado se repite por salto de página, el renglón previo es una tenencia: se mantiene la categoría
+      // la categoría es el renglón previo si es un título corto (Acciones, Bonos…); si el encabezado se repite
+      // por salto de página, el renglón previo es una tenencia o el encabezado de página: se mantiene la categoría
+      const p = prev.trim();
+      const isTitle = p && p.length <= 30 && !/\d/.test(p) && !/Posici[oó]n consolidada|BALANZ|I N T E R|F U L L/i.test(p);
+      if (isTitle || !cat) cat = p;
+      inTable = true; prev = l; continue;
+    }
     if (inTable) {
       const m = t.match(/^(\S+)\s{2,}(.+?)\s{2,}.*?(?:USD|\$)\s*(-?[\d.,]+)$/);
       if (m && /\d/.test(m[3]) && /\s0[.,]00\s/.test(t)) {
@@ -340,6 +350,51 @@ function analyze({ movs, st, rates, st0 = null }) {
   };
   const endMep = st.cur === 'ARS' ? st.mep : (st.mep || null);
 
+  // Los fondos pueden figurar con dos códigos (ej. "BMM A" en la liquidación y "BCMMA" en el renglón espejo y en el resumen):
+  // se unifican usando el renglón espejo del mismo día y misma cantidad de cuotapartes.
+  {
+    const mirrors = movs.filter(m => MIRROR.has(m.desc) && m.ticker);
+    for (const m of movs) {
+      if (m.tipo !== 'Liquidación Fondo' || MIRROR.has(m.desc)) continue;
+      const tw = mirrors.find(x => x.conc === m.conc && Math.abs(Math.abs(x.qty) - Math.abs(m.qty)) < 0.05);
+      if (tw && tw.ticker !== m.ticker) m.ticker = tw.ticker;
+    }
+  }
+  // Transferencias de títulos (entrada o salida de especies sin dinero): se toman como aporte o retiro
+  // valuados a cantidad × precio informado, y en la especie como una compra o venta a ese valor.
+  const transfers = [];
+  for (const m of movs) {
+    if (!/Transferencia/i.test(m.tipo + ' ' + m.desc) || !m.ticker || !m.qty || m.amt) continue;
+    if (!(m.price > 0)) { warnings.push(`Hay una transferencia de ${m.ticker} del ${fmtDate(m.conc)} sin precio: no se pudo valuar.`); continue; }
+    const cur = st.cur === 'ARS' ? 'Pesos' : 'USD';
+    const value = Math.abs(m.qty) * m.price, sign = m.qty > 0 ? 1 : -1;
+    transfers.push({ ...m, tipo: 'Tesorería', desc: `Transferencia de títulos ${sign > 0 ? 'recibida' : 'enviada'} (${m.ticker})`, cur, amt: sign * value, transfer: true });
+    transfers.push({ ...m, tipo: 'Boleto', desc: `Transferencia ${m.ticker}`, cur, amt: -sign * value, price: -1 });
+  }
+  // Canjes (ej. una ON por otra): las especies que entran y salen en el mismo canje se agrupan en un solo renglón.
+  const parent = {};
+  const find = t => (parent[t] ??= t) === t ? t : (parent[t] = find(parent[t]));
+  const canjeDir = {};
+  {
+    const groups = {};
+    for (const m of movs) {
+      if (m.amt || !m.ticker || !m.qty || !/canje/i.test(m.desc)) continue;
+      const k = m.conc + '|' + m.desc.replace(/\s+/g, ' ');
+      (groups[k] ||= []).push(m.ticker);
+      canjeDir[m.ticker] = canjeDir[m.ticker] ?? (m.qty < 0 ? 'out' : 'in');
+      if (m.qty < 0) canjeDir[m.ticker] = 'out';
+    }
+    for (const g of Object.values(groups)) for (const t of g.slice(1)) parent[find(t)] = find(g[0]);
+  }
+  const canjeKey = t => {
+    if (!(t in parent)) return t;
+    const root = find(t), members = Object.keys(parent).filter(x => find(x) === root).sort();
+    if (members.length < 2) return t;
+    const out = members.filter(x => canjeDir[x] === 'out'), inn = members.filter(x => canjeDir[x] !== 'out');
+    return out.length && inn.length ? `${out.join(' + ')} → ${inn.join(' + ')}` : members.join(' + ');
+  };
+  for (const m of [...movs, ...transfers]) if (m.ticker) m.ticker = canjeKey(m.ticker);
+  movs = [...movs, ...transfers];
   const rows = movs.filter(m => !MIRROR.has(m.desc) && m.amt !== 0);
   for (const m of rows) m.usd = isARS(m.cur) ? m.amt / mep(m.liq) : m.amt;
 
@@ -367,9 +422,9 @@ function analyze({ movs, st, rates, st0 = null }) {
     else if (/APCOL/.test(m.desc)) m.kind = 'caucion';
     else if (m.tipo === 'Boleto' && fxKeys.has(m.ticker + '|' + m.conc)) m.kind = 'fx';
     else if (m.tipo === 'Movimiento') {
-      const t = m.desc.match(/\s-\s*([A-Z0-9.]+)\s*$/);
+      const t = m.desc.match(/-\s*([A-Z0-9.]{2,})\s*$/);
       if (/Renta CV|a Cable|Cable a/i.test(m.desc)) m.kind = 'fx';
-      else if (t) { m.kind = 'inst'; m.ticker = t[1].replace(/\.$/, ''); }
+      else if (t) { m.kind = 'inst'; m.ticker = canjeKey(t[1].replace(/\.$/, '')); }
       else m.kind = 'other';
     } else if (m.ticker) m.kind = 'inst';
     else m.kind = 'other';
@@ -396,13 +451,18 @@ function analyze({ movs, st, rates, st0 = null }) {
   const irrFlows = Object.entries(cf).sort().map(([date, amount]) => ({ date, amount }));
   irrFlows.push({ date: endDate, amount: V });
   const irr = xirr(irrFlows);
+  // Rendimiento sobre capital promedio (Dietz modificado): cada flujo pondera por el tiempo que estuvo invertido.
+  const T = Math.max(1, days(flows[0].date, endDate));
+  const avgCap = flows.reduce((s, f) => s + f.usd * Math.max(0, days(f.date, endDate)) / T, 0);
+  const dietz = avgCap > 0 ? gain / avgCap : null;
 
   // --- Resultado por especie -------------------------------------------------
   const holdings = {};
-  for (const h of st.holdings) holdings[h.ticker] = (holdings[h.ticker] || 0) + toUSD(h.value);
+  for (const h of st.holdings) { h.ticker = canjeKey(h.ticker); holdings[h.ticker] = (holdings[h.ticker] || 0) + toUSD(h.value); }
   const inst = {};
   // tenencias al inicio del período: se toman como compradas a su valor de ese día
   if (st0) for (const h of st0.holdings) {
+    h.ticker = canjeKey(h.ticker);
     const g = (inst[h.ticker] ||= { ticker: h.ticker, flujo: 0, renta: 0, invertido: 0, cobrado: 0, sells: 0, buys: 0 });
     const v = toUSD0(h.value);
     g.flujo -= v; g.invertido += v; g.inicial = (g.inicial || 0) + v;
@@ -456,7 +516,7 @@ function analyze({ movs, st, rates, st0 = null }) {
   const cauI = caucion ? caucion.interes : 0;
   const fx = gain - closedPrice - openPrice - renta - cauI;
   const bridge = [
-    { label: st0 && V0 ? (deposits.length || withdrawals.length ? 'Saldo inicial y aportes netos' : 'Saldo inicial') : withdrawals.length ? 'Aportes netos' : 'Aportes', value: net, kind: 'total' },
+    { label: st0 && V0 ? (withdrawals.length ? 'Saldo inicial + aportes − retiros' : deposits.length ? 'Saldo inicial + aportes' : 'Saldo inicial') : withdrawals.length ? 'Aportes netos' : 'Aportes', value: net, kind: 'total' },
     { label: 'Ventas realizadas', value: closedPrice, kind: 'step' },
     { label: 'Posiciones abiertas', value: openPrice, kind: 'step' },
     { label: 'Dividendos y cupones', value: renta, kind: 'step' },
@@ -520,7 +580,7 @@ function analyze({ movs, st, rates, st0 = null }) {
     date: endDate, start: startDate || flows[0].date, startDate, V0, hasStart: !!st0, startMep: st0 && st0.cur === 'ARS' ? st0.mep : null, cur: st.cur, endMep, anyARS,
     totals: {
       deposits: sum(deposits), withdrawals: -sum(withdrawals), net, V, gain, irr,
-      simple: net > 0 ? gain / net : null, renta, nDep: deposits.length, nWd: withdrawals.length,
+      simple: net > 0 ? gain / net : null, dietz, avgCap, useDietz: withdrawals.length > 0 || !!st0, renta, nDep: deposits.length, nWd: withdrawals.length,
       depARS: deposits.filter(f => isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
       depUSD: deposits.filter(f => !isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
       wdARS: -withdrawals.filter(f => isARS(f.cur)).reduce((s, f) => s + f.amt, 0),
@@ -553,7 +613,7 @@ const titleCase = s => s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()
 const listEs = a => a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a.at(-1);
 
 function bridgeSVG(bridge) {
-  const W = 760, H = 330, x0 = 20, y0 = 30, h = 240;
+  const W = 760, H = 290, x0 = 20, y0 = 28, h = 205;
   const steps = bridge.filter(b => b.kind === 'step');
   let run = 0; const levels = [];
   for (const b of bridge) {
@@ -628,6 +688,7 @@ function renderReport(r, brand) {
   const mepTxt = r.anyARS ? ' MEP' : '';
   const name = titleCase(r.client.name);
   const gained = t.gain >= 0;
+  const ret = t.useDietz ? t.dietz : t.simple;
   const hasWd = t.nWd > 0;
   const netLbl = hasWd ? 'neto aportado' : 'aportados';
 
@@ -640,8 +701,8 @@ function renderReport(r, brand) {
   // Resumen
   const dep = t.net - (r.V0 || 0);
   const lead = r.hasStart
-    ? `Entre el ${fmtDate(r.startDate)} y el ${fmtDate(r.date)} la cartera ${gained ? 'ganó' : 'perdió'} <b>${usd(Math.abs(t.gain))} (${pc(t.simple ?? 0)})</b> sobre un saldo inicial de ${usd(r.V0)}${Math.abs(dep) >= 1 ? ` y ${dep >= 0 ? 'aportes netos' : 'retiros netos'} de ${usd(Math.abs(dep))}` : ''}${t.irr !== null ? `, equivalente a una <b>TIR de ${n(t.irr * 100, 1)}% anual en dólares${mepTxt}</b>` : ''}.`
-    : `Desde la primera inversión (${longMonth(r.start)}) la cartera ${gained ? 'ganó' : 'perdió'} <b>${usd(Math.abs(t.gain))} (${pc(t.simple ?? 0)})</b> sobre ${hasWd ? 'un neto aportado de ' : ''}${usd(t.net)}${hasWd ? '' : ' aportados'}${t.irr !== null ? `, equivalente a una <b>TIR de ${n(t.irr * 100, 1)}% anual en dólares${mepTxt}</b>` : ''}.`;
+    ? `Entre el ${fmtDate(r.startDate)} y el ${fmtDate(r.date)} la cartera ${gained ? 'ganó' : 'perdió'} <b>${usd(Math.abs(t.gain))} (${pc(ret ?? 0)} sobre el capital promedio invertido)</b> con un saldo inicial de ${usd(r.V0)}${Math.abs(dep) >= 1 ? ` y ${dep >= 0 ? 'aportes netos' : 'retiros netos'} de ${usd(Math.abs(dep))}` : ''}${t.irr !== null ? `, equivalente a una <b>TIR de ${n(t.irr * 100, 1)}% anual en dólares${mepTxt}</b>` : ''}.`
+    : `Desde la primera inversión (${longMonth(r.start)}) la cartera ${gained ? 'ganó' : 'perdió'} <b>${usd(Math.abs(t.gain))} (${pc(ret ?? 0)}${t.useDietz ? ' sobre el capital promedio invertido' : ''})</b> ${hasWd ? 'con un neto aportado de ' : 'sobre '}${usd(t.net)}${hasWd ? '' : ' aportados'}${t.irr !== null ? `, equivalente a una <b>TIR de ${n(t.irr * 100, 1)}% anual en dólares${mepTxt}</b>` : ''}.`;
   const rows = [[r.hasStart ? `Saldo inicial (resumen al ${fmtDate(r.startDate)})` : 'Saldo inicial', r.hasStart ? usd(r.V0, 2) : 'USD 0']];
   const depDetail = t.hasPesoFlows ? ` (${t.nDep} ingresos: ARS ${n(t.depARS / 1e6, 1)} M y USD ${n(t.depUSD)})` : ` (${t.nDep} ingresos)`;
   if (t.nDep || !r.hasStart) rows.push(['Aportes' + depDetail, usd(t.deposits, 2)]);
@@ -653,7 +714,7 @@ function renderReport(r, brand) {
   if (r.hasStart && (t.nDep || hasWd)) rows.push(['Saldo inicial más aportes netos', usd(t.net, 2)]);
   rows.push([`Valor de la cartera al ${fmtDate(r.date)}${r.cur === 'ARS' ? ` (ARS ${n(t.totalOrig)})` : ''}`, usd(t.V, 2)]);
   rows.push(['Ganancia total', usd(t.gain, 2)]);
-  rows.push([r.hasStart ? 'Rendimiento sobre saldo inicial y aportes' : `Rendimiento sobre lo ${hasWd ? 'neto aportado' : 'aportado'}`, pc(t.simple ?? 0)]);
+  rows.push(t.useDietz ? [`Rendimiento del período sobre el capital promedio invertido (${usd(t.avgCap)})`, pc(t.dietz ?? 0)] : ['Rendimiento sobre lo aportado', pc(t.simple ?? 0)]);
   if (t.irr !== null) rows.push([`TIR anual en dólares${mepTxt} (ponderada por fecha de cada movimiento)`, pc(t.irr)]);
   rows.push(['Dividendos y cupones cobrados', usd(t.renta, 2)]);
   let notes = [];
@@ -670,7 +731,7 @@ function renderReport(r, brand) {
   if (r.caucion) bnote += ` Las ${r.caucion.n} cauciones colocadas rindieron ${r.caucion.interesARS ? `ARS ${n(r.caucion.interesARS)}` : usd(r.caucion.interes)} (TNA promedio ${n(r.caucion.tna * 100, 1)}%).`;
   if (steps.some(b => b.label === 'Efecto cambiario')) bnote += ' El efecto cambiario es la variación en dólares de los pesos mantenidos en la cuenta mientras se movía el MEP, más el costo de las conversiones de moneda.';
   const headline = gained && gainParts.length ? `La mayor parte de la ganancia viene de ${gainParts[0].label.toLowerCase()} (${usd(gainParts[0].value)}).` : '';
-  h += `<section class="avoid"><h2>De dónde sale la ganancia</h2>${headline ? `<p>${headline}</p>` : ''}${bridgeSVG(r.bridge)}<p class="small">${bnote}</p></section>`;
+  h += `<section><div class="avoid"><h2>De dónde sale la ganancia</h2>${headline ? `<p>${headline}</p>` : ''}${bridgeSVG(r.bridge)}</div><p class="small">${bnote}</p></section>`;
 
   // Composición
   const V = t.V;
